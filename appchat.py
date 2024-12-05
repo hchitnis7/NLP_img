@@ -3,6 +3,7 @@ import base64
 import streamlit as st
 from mistralai import Mistral
 
+
 # Function to encode image to base64
 def encode_image(image_file):
     """Encode the image to base64."""
@@ -12,9 +13,11 @@ def encode_image(image_file):
         st.error(f"Error encoding image: {e}")
         return None
 
+
 # API Key and client setup
-api_key = 'uH96MMtPOqN0kJNYSGKUqH173NF8EBV9'
+api_key = st.secrets["api_key"]  # Load the API key securely from Streamlit secrets
 client = Mistral(api_key=api_key)
+
 
 # Function to call the API with multiple prompt options
 def get_api_responses(image_base64, detailed=False):
@@ -43,17 +46,17 @@ def get_api_responses(image_base64, detailed=False):
         st.error(f"Error during API call: {e}")
         return None
 
+
 # Streamlit UI components
 st.title("Enhanced Image Captioning")
-st.markdown("Upload an image, and explore multiple captions, detailed descriptions, or chat with the model about the image.")
+st.markdown(
+    "Upload an image, and explore multiple captions, detailed descriptions, or chat with the model about the image.")
 
 # Upload image file
 uploaded_image = st.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
 
 # Tabs for different functionalities
 tab1, tab2, tab3 = st.tabs(["Short Captions", "Detailed Description", "Chat with Model"])
-
-
 
 if uploaded_image:
     base64_image = encode_image(uploaded_image)
@@ -66,7 +69,8 @@ if uploaded_image:
                 st.write("Generating short captions...")
                 captions_response = get_api_responses(base64_image)
                 if captions_response:
-                    captions = captions_response.split("\n")  # Assuming the API returns captions as a newline-separated list
+                    captions = captions_response.split(
+                        "\n")  # Assuming the API returns captions as a newline-separated list
                     st.subheader("Caption Options:")
                     for i, caption in enumerate(captions, start=1):
                         st.write(f"{caption}")
@@ -90,7 +94,7 @@ if uploaded_image:
     with tab3:
         if "chat_history" not in st.session_state:
             st.session_state.chat_history = []
-        
+
         st.image(uploaded_image, caption="Uploaded Image", use_column_width=True)
         user_input = st.text_input("Ask a question about the image:")
         if st.button("Send"):
@@ -99,25 +103,26 @@ if uploaded_image:
                 try:
                     chat_response = client.agents.complete(
                         agent_id="ag:4849df2f:20241103:sfrpixtral:0f95a7d8",
-                        messages=[
-                            {"role": "user", "content": [
+                        messages=[{
+                            "role": "user",
+                            "content": [
                                 {"type": "text", "text": user_input},
                                 {"type": "image_url", "image_url": f"data:image/jpeg;base64,{base64_image}"}
-                            ]}
-                        ]
+                            ]
+                        }]
                     )
                     model_reply = chat_response.choices[0].message.content
                     st.session_state.chat_history.append({"role": "assistant", "content": model_reply})
                 except Exception as e:
                     st.error(f"Error during chat: {e}")
-            
+
         # Display chat history
         for chat in st.session_state.chat_history:
             role = "You" if chat["role"] == "user" else "Model"
             st.write(f"**{role}:** {chat['content']}")
         # Reset chat
         if st.button("Reset Chat"):
-            st.session_state.chat_history = []    
+            st.session_state.chat_history = []
 
 else:
     st.info("Please upload an image to begin.")
